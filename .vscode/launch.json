@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: test_14647_host_healthcheck",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/test_14647_host_healthcheck.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: generator --new",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/hsl3/hsl3_generator/generator.py",
+            "console": "integratedTerminal",
+            "args": ["--new"]
+        },
+        {
+            "name": "Python Debugger: ping",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/hsl3_14647_ping.py",
+            "console": "integratedTerminal",
+            "args": ["--new"]
+        }
+    ]
+}

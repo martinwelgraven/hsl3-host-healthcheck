@@ -1,0 +1,3 @@
+[submodule "hsl3"]
+	path = hsl3
+	url = https://github.com/martinwelgraven/hsl3.git
