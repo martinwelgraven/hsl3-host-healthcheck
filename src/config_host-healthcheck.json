@@ -1,0 +1,95 @@
+{
+    "module": {
+        "id": "14647",
+        "name": "Host Healthcheck",
+        "version": "0.1.0",
+        "version_date": "2026-03-18",
+        "description": "This is a description for the module.",
+        "warning": "",
+        "note": "",
+        "category": "IOT Device Data",
+        "context": "host_healthcheck",
+        "hsl_filename": "14647_host_healthcheck.hsl",
+        "inputs": [
+            {
+                "type": "string",
+                "identifier": "IN01_HOST_NAME",
+                "init_value": "",
+                "label": "Host Name or IP",
+                "description": "Host name or IP address to perform health check on."
+            },
+            {
+                "type": "number",
+                "identifier": "IN02_HOST_PORT",
+                "init_value": 80,
+                "label": "Host Port",
+                "description": "Port number to perform health check on."
+            },
+            {
+                "type": "number",
+                "identifier": "IN03_HOST_SSL",
+                "init_value": 1,
+                "label": "Host use SSL (1=True, 0=False)",
+                "description": "Indicates whether to use SSL for the health check (1=True, 0=False)."
+            },
+            {
+                "type": "string",
+                "identifier": "IN04_HOST_PATH",
+                "init_value": "",
+                "label": "Host Path",
+                "description": "Path to execute a HTTP request and check if the host is reachable."
+            },
+            {
+                "type": "string",
+                "identifier": "IN05_HEALTHCHECK_BENCHMARK",
+                "init_value": "",
+                "label": "Healthcheck Benchmark",
+                "description": "Benchmark value for the health check on the http(S)."
+            },
+            {
+                "type": "string",
+                "identifier": "IN06_MAC_ADDRESS",
+                "init_value": "",
+                "label": "MAC Address",
+                "description": "MAC address of the host."
+            },
+            {
+                "type": "number",
+                "identifier": "IN07_HEALTHCHECK_FREQUENCY",
+                "init_value": 1,
+                "label": "Healthcheck Frequency",
+                "description": "Frequency of the health check in seconds."
+            },
+            {
+                "type": "number",
+                "identifier": "IN08_TRIGGER_WOL",
+                "init_value": 1,
+                "label": "Trigger Wake-on-LAN",
+                "description": "Indicates whether to trigger Wake-on-LAN (1=True, 0=False)."
+            }
+        ],
+        "outputs": [
+            {
+                "type": "number",
+                "identifier": "IS_DETECTED",
+                "init_value": "0",
+                "sbc": "s",
+                "label": "Network Detection",
+                "description": "Indicates whether the host is detected in the network (1=True, 0=False)."
+            }
+        ],
+        "stores": [],
+        "timers": [
+            {
+                "identifier": "TIMER01",
+                "description": "This is a description for Timer 01"
+            }
+        ],
+        "scripts": [
+            {
+                "filename": "hsl3_14647_host_healthcheck.py"
+            }
+        ],
+        "translations": []
+    }
+}
