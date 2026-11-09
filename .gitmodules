@@ -1,0 +1,3 @@
+[submodule "hsl3-framework"]
+	path = hsl3-framework
+	url = https://github.com/martinwelgraven/gira-hsl3-framework.git
