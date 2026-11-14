@@ -1,0 +1,28 @@
+[project]
+name = "hsl3-host-healthcheck"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Martin", email = "50510526+martinwelgraven@users.noreply.github.com" }
+]
+requires-python = ">=3.9.0, <3.10"
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "python-dotenv>=1.2.1",
+]
+
+[project.scripts]
+hsl3-host-healthcheck = "hsl3_host_healthcheck:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
+
