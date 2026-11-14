@@ -30,13 +30,13 @@ def ping(host: str, timeout: int = 4) -> bool:
             stderr=subprocess.PIPE,
             timeout=timeout + 2
         )
-        print ( f"Ping command output: {result.stdout.decode().strip()}" )
+        #print ( f"Ping command output: {result.stdout.decode().strip()}" )
         return result.returncode == 0
     except subprocess.TimeoutExpired:
-        print (f"Ping to {host} timed out.")
+        #print (f"Ping to {host} timed out.")
         return False
     except Exception as e:
-        print(f"Ping failed: {e}")
+        #print(f"Ping failed: {e}")
         return False
 
 
@@ -57,13 +57,13 @@ def tcp_health_check(host: str, port: int, timeout: int = 4) -> bool:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(timeout)
             result = sock.connect_ex((host, port))
-            print ( f"TCP health check to {host}:{port} returned code: {result}" )
+            #print ( f"TCP health check to {host}:{port} returned code: {result}" )
             return result == 0
     except socket.gaierror:
-        print(f"TCP health check failed: hostname {host} could not be resolved")
+        #print(f"TCP health check failed: hostname {host} could not be resolved")
         return False
     except Exception as e:
-        print(f"TCP health check to {host}:{port} failed: {e}")
+        #print(f"TCP health check to {host}:{port} failed: {e}")
         return False
     
 
@@ -91,7 +91,7 @@ def icmp_echo_request(host: str, timeout: float = 1.0, payload_size: int = 32) -
     try:
         target_ip = socket.gethostbyname(host)
     except socket.gaierror:
-        print(f"ICMP failed: hostname {host} could not be resolved")
+        #print(f"ICMP failed: hostname {host} could not be resolved")
         return False
 
     icmp_type = 8  # Echo Request
@@ -112,7 +112,7 @@ def icmp_echo_request(host: str, timeout: float = 1.0, payload_size: int = 32) -
 
             while True:
                 if time.time() - sent_at > timeout:
-                    print(f"ICMP to {host} timed out.")
+                    #print(f"ICMP to {host} timed out.")
                     return False
 
                 data, addr = sock.recvfrom(65535)
@@ -126,17 +126,17 @@ def icmp_echo_request(host: str, timeout: float = 1.0, payload_size: int = 32) -
 
                 r_type, r_code, _, r_id, r_seq = struct.unpack("!BBHHH", icmp_header)
                 if r_type == 0 and r_code == 0 and r_id == identifier and r_seq == sequence:
-                    print(f"ICMP echo reply received from {host}")
+                    #print(f"ICMP echo reply received from {host}")
                     return True
 
     except PermissionError:
-        print("ICMP failed: raw sockets require elevated privileges")
+        #print("ICMP failed: raw sockets require elevated privileges")
         return False
     except socket.timeout:
-        print(f"ICMP to {host} timed out.")
+        #print(f"ICMP to {host} timed out.")
         return False
     except Exception as e:
-        print(f"ICMP failed: {e}")
+        #print(f"ICMP failed: {e}")
         return False
 
 
@@ -176,27 +176,3 @@ def wake_on_lan(mac_address: str, broadcast: str = "255.255.255.255", port: int 
     except Exception as e:
         print(f"Wake-on-LAN failed: {e}")
         return False
-
-
-# def __main__():
-#     hosts = [
-#              "192.168.3.162"
-#              ]
-#     for host in hosts:
-        
-#         if icmp_echo_request(host, timeout=2, payload_size=64):
-#             print(f"{host} is reachable via ICMP echo request.")
-            
-#         elif tcp_health_check(host, 443, timeout=2):
-#                 print(f"{host} is reachable on port 80.")
-        
-#         elif ping(host):
-#             print(f"{host} is reachable.")
-        
-#         else:
-#             print(f"{host} is not reachable.")
-#             # wake_on_lan("9C:8C:6E:0A:1C:09")  # Replace with actual MAC address if needed   
-
-#         print("\n")
-# if __name__ == "__main__":
-#     __main__()

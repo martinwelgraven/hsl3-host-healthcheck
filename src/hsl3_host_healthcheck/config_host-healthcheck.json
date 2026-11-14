@@ -13,7 +13,7 @@
         "inputs": [
             {
                 "type": "string",
-                "identifier": "IN01_HOST_NAME",
+                "identifier": "IN01_HOSTNAME",
                 "init_value": "",
                 "label": "Host Name or IP",
                 "description": "Host name or IP address to perform health check on."
@@ -28,7 +28,7 @@
             {
                 "type": "number",
                 "identifier": "IN03_HOST_SSL",
-                "init_value": 1,
+                "init_value": 0,
                 "label": "Host use SSL (1=True, 0=False)",
                 "description": "Indicates whether to use SSL for the health check (1=True, 0=False)."
             },
@@ -56,7 +56,7 @@
             {
                 "type": "number",
                 "identifier": "IN07_HEALTHCHECK_FREQUENCY",
-                "init_value": 1,
+                "init_value": 60,
                 "label": "Healthcheck Frequency",
                 "description": "Frequency of the health check in seconds."
             },
@@ -72,22 +72,41 @@
             {
                 "type": "number",
                 "identifier": "IS_DETECTED",
-                "init_value": "0",
+                "init_value": 0,
                 "sbc": "s",
                 "label": "Network Detection",
                 "description": "Indicates whether the host is detected in the network (1=True, 0=False)."
+            },
+            {
+                "type": "number",
+                "identifier": "IS_ONLINE",
+                "init_value": 0,
+                "sbc": "s",
+                "label": "HTTP Health",
+                "description": "Indicates whether the HTTP health check succeeds (1=True, 0=False)."
+            },
+            {
+                "type": "string",
+                "identifier": "ERROR_MESSAGE",
+                "init_value": "",
+                "sbc": "s",
+                "label": "Health Check Error",
+                "description": "Error message for the most recent HTTP health check, or empty when successful."
             }
         ],
         "stores": [],
         "timers": [
             {
-                "identifier": "TIMER01",
-                "description": "This is a description for Timer 01"
+                "identifier": "HOST_CHECK_TIMER",
+                "description": "This is a description for the host check timer"
             }
         ],
         "scripts": [
             {
                 "filename": "hsl3_14647_host_healthcheck.py"
+            },
+            {
+                "filename": "hsl3_14647_ping.py"
             }
         ],
         "translations": []
