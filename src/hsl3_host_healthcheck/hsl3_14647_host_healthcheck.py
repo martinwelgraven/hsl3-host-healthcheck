@@ -1,14 +1,13 @@
+import json
+
+import requests
+import logging
 import re
 
-from http.client import HTTPException
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, ProxyHandler, build_opener
-
 if __package__:
-	from .hsl3_14647_ping import ping, tcp_health_check, icmp_echo_request, wake_on_lan # type: ignore
+	from .hsl3_14647_ping import  tcp_health_check,  wake_on_lan # type: ignore
 else:
-	from hsl3_14647_ping import ping, tcp_health_check, icmp_echo_request, wake_on_lan # type: ignore
+	from hsl3_14647_ping import  tcp_health_check, wake_on_lan # type: ignore
 
 
 HOSTNAME_REGEX = re.compile(
@@ -22,22 +21,19 @@ HOSTNAME_REGEX = re.compile(
 )
 
 
-class _NoRedirect(HTTPRedirectHandler):
-	def redirect_request(self, req, fp, code, msg, headers, newurl):
-		return None
-
-
 class LogicModule:
 
 	def __init__(self, hsl3):
 		self.fw = hsl3
 		self.debug = self.fw.create_debug_section()
+		self.logger = self.fw.get_logger(level=logging.ERROR)	
 
 		self.initialized = False
 		self.client = {
 			'host': '',
 			'port': 0,
 			'path': '',
+			'params': '',
 			'ssl': False,
 			'benchmark': '',
 			'mac_address': '',
@@ -45,13 +41,14 @@ class LogicModule:
 			'trigger_wol': False
 		}
 
+		self.do_log = False
 		self.error = None
 
 		# For local reuse of output values
 		self.outputs = {			
-			'IS_DETECTED': { 'value': 0, 'sbc': 's', 'index': 1 },
-			'IS_ONLINE': { 'value': 0, 'sbc': 's', 'index': 2 },
-			'ERROR_MESSAGE': { 'value': b'', 'sbc': 's', 'index': 3 }
+			'OUT1_IS_ONLINE': { 'value': 0, 'sbc': 's', 'index': 2 },
+			'OUT2_RESPONSE_TIME': { 'value': 0.0, 'sbc': 's', 'index': 2 },
+			'OUT3_ERROR_MESSAGE': { 'value': b'', 'sbc': 's', 'index': 3 }
 		}
 
 
@@ -67,15 +64,20 @@ class LogicModule:
 		self.client['port'] = inputs.value('IN02_HOST_PORT')
 		self.client['ssl'] = inputs.value('IN03_HOST_SSL')
 		self.client['path'] = self.text('IN04_HOST_PATH', inputs)
-		self.client['benchmark'] = self.text('IN05_HEALTHCHECK_BENCHMARK', inputs)
-		self.client['mac_address'] = self.text('IN06_MAC_ADDRESS', inputs)
-		self.client['healthcheck_frequency'] = inputs.value('IN07_HEALTHCHECK_FREQUENCY')
+		self.client['params'] = self.text('IN05_PARAMS', inputs)
+		self.client['benchmark'] = self.text('IN06_HEALTHCHECK_BENCHMARK', inputs)
+		self.client['mac_address'] = self.text('IN07_MAC_ADDRESS', inputs)
+		self.client['healthcheck_frequency'] = inputs.value('IN08_HEALTHCHECK_FREQUENCY')
+		
+		# Configure logger based on input
+		self.do_log = True if inputs.value('IN10_ENABLE_LOGGING') == 1 else False
+		self.set_logger(self.do_log)
+			
 
 		self.initialized = True
 		self.on_calc(inputs)
 
 
-	
 	def on_calc(self, inputs):
 		"""
 		Calculate called if any new input is received by the logic node.
@@ -90,45 +92,91 @@ class LogicModule:
 		# Reset the timer
 		self.fw.set_timer('HOST_CHECK_TIMER', None)
 		self.error = None
-		if inputs.changed('IN08_TRIGGER_WOL') and self.validate(True):
-			# Trigger Wake-on-LAN
-			broadcast = '255.255.255.255'
-			host_parts = self.client['host'].split('.')
-			if len(host_parts) == 4:
-				if all(0 <= int(x) < 256 for x in host_parts):
-					broadcast = '.'.join(host_parts[:3] + ['255'])
 
-			wake_on_lan(self.client['mac_address'], broadcast=broadcast)
+		# Handle logging enable/disable input
+		if inputs.changed('IN09_TRIGGER_WOL') and self.validate(True):
+			# Trigger Wake-on-LAN
+			self.logger.info("Wake-on-LAN trigger received")
+			wake_on_lan(self.client['mac_address'], self.client['host'], self.logger)
 			return
-		elif inputs.changed('IN07_HEALTHCHECK_FREQUENCY') and self.client['healthcheck_frequency'] != inputs.value('IN07_HEALTHCHECK_FREQUENCY'):
-			self.client['healthcheck_frequency'] = inputs.value('IN07_HEALTHCHECK_FREQUENCY')
+		
+		elif inputs.changed('IN08_HEALTHCHECK_FREQUENCY') and \
+			self.client['healthcheck_frequency'] != inputs.value('IN08_HEALTHCHECK_FREQUENCY'):
+			
+			self.client['healthcheck_frequency'] = inputs.value('IN08_HEALTHCHECK_FREQUENCY')
+			self.log(f"Healthcheck frequency: {self.client['healthcheck_frequency']}", logging.DEBUG)
+			
+		elif inputs.changed("IN10_ENABLE_LOGGING"):
+			self.do_log = True if inputs.value("IN10_ENABLE_LOGGING") == 1 else False
+			self.set_logger(self.do_log)
+
 		else:
 			if inputs.changed('IN01_HOSTNAME'):
 				self.client['host'] = self.text('IN01_HOSTNAME', inputs)
+				
 			if inputs.changed('IN02_HOST_PORT'):
 				self.client['port'] = inputs.value('IN02_HOST_PORT')
+		
 			if inputs.changed('IN03_HOST_SSL'):
 				self.client['ssl'] = inputs.value('IN03_HOST_SSL')
+
 			if inputs.changed('IN04_HOST_PATH'):
 				self.client['path'] = self.text('IN04_HOST_PATH', inputs)
-			if inputs.changed('IN05_HEALTHCHECK_BENCHMARK'):
-				self.client['benchmark'] = self.text('IN05_HEALTHCHECK_BENCHMARK', inputs)
-			if inputs.changed('IN06_MAC_ADDRESS'):
-				self.client['mac_address'] = self.text('IN06_MAC_ADDRESS', inputs)
+
+			if inputs.changed('IN05_PARAMS'):
+				self.client['params'] = self.text('IN05_PARAMS', inputs)
+
+			if inputs.changed('IN06_HEALTHCHECK_BENCHMARK'):
+				self.client['benchmark'] = self.text('IN06_HEALTHCHECK_BENCHMARK', inputs)
+
+			if inputs.changed('IN07_MAC_ADDRESS'):
+				self.client['mac_address'] = self.text('IN07_MAC_ADDRESS', inputs)
 
 		if self.validate():
+			self.log("Validation passed, executing healthchecks", logging.DEBUG)
 			self.do_healthchecks()
 			if self.client['healthcheck_frequency'] > 0:
+				self.log(f"Setting timer for next healthcheck in {self.client['healthcheck_frequency']}s", logging.INFO)
 				self.fw.set_timer('HOST_CHECK_TIMER', self.client['healthcheck_frequency'])
+			
+			for index_or_key in inputs.keys():
+				if inputs.changed(index_or_key):
+					self.debug.set(index_or_key, inputs.value(index_or_key))
+		
 		else:
-			self.set_output("IS_DETECTED", 0)
-			self.set_output("IS_ONLINE", 0)
+			self.log("Validation failed, clearing outputs", logging.DEBUG)
+			self.set_output("OUT1_IS_ONLINE", 0)
 
+	def set_logger(self, do_log = False):
+		"""Enables or disables logging."""
+		if do_log:
+			self.logger.setLevel(logging.DEBUG)
+		else:
+			self.logger.setLevel(logging.ERROR)
+
+		self.do_log = bool(do_log)
+		self.log(f"Logging {'enabled' if self.do_log else 'disabled'}")
+
+	def log(self, message, level=logging.INFO):
+		"""Logs a message at the specified level if logging is enabled."""
+
+		if level==logging.DEBUG:
+			if self.do_log:
+				self.debug.log(message)
+		elif level==logging.INFO:
+			self.logger.info(message)
+		elif level==logging.WARNING:
+			self.logger.warning(message)
+		elif level==logging.ERROR:
+			self.logger.error(message)
+		elif level==logging.CRITICAL:
+			self.logger.critical(message)
 
 	def on_timer(self, timer):
 		"""Executes when the host check timer expires, runs the host check and restarts the timer"""
 		
 		if timer.changed('HOST_CHECK_TIMER'):
+			self.logger.debug("Host check timer triggered")
 			self.fw.run_in_context(self.do_healthchecks, ())
 			self.fw.set_timer('HOST_CHECK_TIMER', self.client['healthcheck_frequency'])
 
@@ -137,17 +185,25 @@ class LogicModule:
 		""" Sets an output value taking into account 'send by change' settings """
 
 		if key in self.outputs.keys():
+			if not isinstance(value, (int, float, bytes, str)):
+				self.logger.error(f"Invalid value type for output '{key}': {type(value)}".encode('iso-8859-15'))
+				return
+			elif isinstance(value, str):
+				value = value.encode('iso-8859-15')
+
 			if self.outputs[key]['value'] != value or self.outputs[key]['sbc'] == 's':
 				self.outputs[key]['value'] = value
 				self.fw.set_output(key, value)
+				if self.do_log:
+					self.debug.set(key, value.decode('iso-8859-15') if isinstance(value, bytes) else value)
 
-	
 	def set_error(self, message):
 		"""Sets the error message and updates the output accordingly."""
-		
+
 		self.error = message
-		self.debug.log(message)
-		self.set_output('ERROR_MESSAGE', message.encode('iso-8859-15'))
+
+		self.logger.warning(message)
+		self.set_output('OUT3_ERROR_MESSAGE', message)
 
 
 	def text(self, key, inputs):
@@ -200,6 +256,19 @@ class LogicModule:
 
 		return True
 
+
+	def check_params(self) -> bool:
+		"""Validates the HTTP request parameters input as a JSON string."""
+	
+		params = self.client['params']
+		try:
+			json.loads(params)
+		except json.JSONDecodeError:
+			self.set_error('Invalid HTTP request parameters')
+			return False
+
+		return True
+
 	
 	def check_mac_address(self) -> bool:
 		"""Validates the MAC address input as a string, validating its format."""
@@ -216,7 +285,7 @@ class LogicModule:
 	def get_benchmark(self, inputs) -> str:
 		"""Returns the healthcheck benchmark input as a string."""
 
-		return self.text('IN05_HEALTHCHECK_BENCHMARK', inputs).strip()
+		return self.text('IN06_HEALTHCHECK_BENCHMARK', inputs).strip()
 		
 	
 	def check_healthcheck_frequency(self) -> bool:
@@ -233,8 +302,8 @@ class LogicModule:
 	def validate(self, do_mac_address: bool = True):
 		"""Validate the host and port inputs."""
 
-		self.set_output('ERROR_MESSAGE', ''.encode('iso-8859-15'))
-	
+		self.set_output('OUT3_ERROR_MESSAGE', '')
+		
 		if not self.check_hostname():
 			return False
 		if not self.check_port():
@@ -245,6 +314,8 @@ class LogicModule:
 			return False
 		if not self.check_path():
 			return False
+		if not self.check_params():
+			return False
 		if do_mac_address and not self.check_mac_address():
 			return False
 		
@@ -254,61 +325,36 @@ class LogicModule:
 	def do_healthchecks(self):
 		"""Check the host's network and HTTP health and set the appropriate outputs."""
 		
+		self.logger.info(f"Starting healthcheck for {self.client['host']}")
+
+		tcp_results = tcp_health_check(self.client['host'].strip('[]'), self.client['port'], logger=self.logger)
+
 		is_online = False
-		is_detected = self.do_healthcheck_host_on_network()
-		if is_detected:
-			is_online = self.do_healthcheck_host_alive()
+		if tcp_results and 'available' in tcp_results.keys() and 'response_ms' in tcp_results.keys():
+			self.logger.info(f"TCP health check returned {tcp_results['available']}: {tcp_results['response_ms']}")
+			is_online = tcp_results['available'] is True
+			response_ms = tcp_results['response_ms']
+			self.set_output('OUT1_IS_ONLINE', 1 if is_online else 0)
+			self.set_output('OUT2_RESPONSE_TIME', response_ms)
+								
+
+		if is_online and self.client['benchmark']:
+			scheme = 'https' if self.client['ssl'] else 'http'
+			url = '{}://{}:{}{}'.format(scheme, self.client['host'], self.client['port'], self.client['path'] or '/')
 			
-		self.set_output('IS_DETECTED', 0 if not is_detected else 1)
-		self.set_output('IS_ONLINE', 0 if not is_online else 1)
+			self.logger.info(f"Checking HTTP health at {url}")
+			params = self.client['params']
+			response = requests.get(url, params=params)
+			
+			self.logger.info(f"Received response: {response.content[:60]}")
 
-
-	def do_healthcheck_host_on_network(self) -> bool:
-		"""Check network reachability using TCP, ping, and ICMP."""
-
-		ping_ok = ping(self.client['host'].strip('[]'))
-		icmp_ok = icmp_echo_request(self.client['host'].strip('[]'))
-
-		return (ping_ok == True or icmp_ok == True)
-
-
-	def do_healthcheck_host_alive(self) -> bool:
-		"""Check network reachability and HTTP health using the current inputs."""
-
-		scheme = 'https' if self.client['ssl'] else 'http'
-		url = '{}://{}:{}{}'.format(scheme, self.client['host'], self.client['port'], self.client['path'] or '/')
-
-		online = False
-		error = ''
-		
-		try:
-			benchmark = self.client['benchmark']
-			if not benchmark:
-				tcp_check = tcp_health_check(self.client['host'].strip('[]'), self.client['port'])
-				if type(tcp_check) is bool:
-					online = tcp_check
+			if response.status_code == 200:
+				self.logger.info("HTTP health check passed")
+				if self.client['benchmark'] in response.text:
+					self.logger.info("Benchmark found in response body")
+				else:
+					self.logger.error("Benchmark not found in response body")
+					self.set_error("Benchmark not found in response body")
 			else:
-				opener = build_opener(ProxyHandler({}), _NoRedirect())
-				with opener.open(url, timeout=4) as response:
-					if 200 <= response.status < 300:
-						charset = response.headers.get_content_charset() or 'utf-8'
-						body = response.read().decode(charset, errors='replace')
-						online = self.client['benchmark'] in body
-						if not online:
-							error = 'HTTP health check benchmark was not found in the response'
-					else:
-						error = 'HTTP health check returned status {}'.format(response.status)
-		
-		except HTTPError as exc:
-			self.debug.log('HTTPError occurred: {}'.format(exc))
-			error = 'HTTP health check returned status {}'.format(exc.code)
-			exc.close()
-		except (URLError, OSError, HTTPException, ValueError, LookupError) as exc:
-			error = 'HTTP health check failed: {}'.format(exc)
-		except Exception as exc:
-			error = 'Unexpected error occurred: {}'.format(exc)
-
-		if error:
-			self.set_error(error)
-
-		return online
+				self.logger.error(f"HTTP health check failed with status {response.status_code}")
+				self.set_error(f"HTTP health check failed with status {response.status_code}")

@@ -23,6 +23,14 @@ A logic node for the GIRA HomeServer that checks a configured hosts for its heal
 
 ### Setup
 
+From the repository root, build the HSL file using the local framework:
+
+```bash
+uv run build-hsl
+```
+
+This overwrites `src/hsl3_host_healthcheck/14647_host_healthcheck.hsl`.
+Ensure the `hsl3` Git submodule is initialized before building.
 
 ## Quick Start
 

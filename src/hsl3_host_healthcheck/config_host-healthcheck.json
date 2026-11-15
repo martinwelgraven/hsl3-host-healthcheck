@@ -7,7 +7,7 @@
         "description": "This is a description for the module.",
         "warning": "",
         "note": "",
-        "category": "IOT Device Data",
+        "category": "Network Tools",
         "context": "host_healthcheck",
         "hsl_filename": "14647_host_healthcheck.hsl",
         "inputs": [
@@ -41,53 +41,67 @@
             },
             {
                 "type": "string",
-                "identifier": "IN05_HEALTHCHECK_BENCHMARK",
+                "identifier": "IN05_PARAMS",
+                "init_value": "{}",
+                "label": "HTTP Request Parameters",
+                "description": "Parameters to include in the HTTP request {} or {'key1': 10, 'key2': 'value2'} format."
+            },
+            {
+                "type": "string",
+                "identifier": "IN06_HEALTHCHECK_BENCHMARK",
                 "init_value": "",
                 "label": "Healthcheck Benchmark",
                 "description": "Benchmark value for the health check on the http(S)."
             },
             {
                 "type": "string",
-                "identifier": "IN06_MAC_ADDRESS",
+                "identifier": "IN07_MAC_ADDRESS",
                 "init_value": "",
                 "label": "MAC Address",
                 "description": "MAC address of the host."
             },
             {
                 "type": "number",
-                "identifier": "IN07_HEALTHCHECK_FREQUENCY",
+                "identifier": "IN08_HEALTHCHECK_FREQUENCY",
                 "init_value": 60,
                 "label": "Healthcheck Frequency",
                 "description": "Frequency of the health check in seconds."
             },
             {
                 "type": "number",
-                "identifier": "IN08_TRIGGER_WOL",
-                "init_value": 1,
+                "identifier": "IN09_TRIGGER_WOL",
+                "init_value": 0,
                 "label": "Trigger Wake-on-LAN",
                 "description": "Indicates whether to trigger Wake-on-LAN (1=True, 0=False)."
+            },
+            {
+                "type": "number",
+                "identifier": "IN10_ENABLE_LOGGING",
+                "init_value": 0,
+                "label": "Enable Logging",
+                "description": "Enable diagnostic Syslog messages and debugging (1=True, 0=False). Errors and critical messages are always logged."
             }
         ],
         "outputs": [
             {
                 "type": "number",
-                "identifier": "IS_DETECTED",
-                "init_value": 0,
-                "sbc": "s",
-                "label": "Network Detection",
-                "description": "Indicates whether the host is detected in the network (1=True, 0=False)."
-            },
-            {
-                "type": "number",
-                "identifier": "IS_ONLINE",
+                "identifier": "OUT1_IS_ONLINE",
                 "init_value": 0,
                 "sbc": "s",
                 "label": "HTTP Health",
                 "description": "Indicates whether the HTTP health check succeeds (1=True, 0=False)."
             },
             {
+                "type": "number",
+                "identifier": "OUT2_RESPONSE_TIME",
+                "init_value": 0.0,
+                "sbc": "s",
+                "label": "Response Time",
+                "description": "Response time of the Ping health check in milliseconds."
+            },
+            {
                 "type": "string",
-                "identifier": "ERROR_MESSAGE",
+                "identifier": "OUT3_ERROR_MESSAGE",
                 "init_value": "",
                 "sbc": "s",
                 "label": "Health Check Error",
@@ -98,7 +112,7 @@
         "timers": [
             {
                 "identifier": "HOST_CHECK_TIMER",
-                "description": "This is a description for the host check timer"
+                "description": "The seconds interval for performing periodic host health checks."
             }
         ],
         "scripts": [
