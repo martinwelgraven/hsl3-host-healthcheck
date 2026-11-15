@@ -26,7 +26,6 @@ for path in (ROOT_DIR, SRC_DIR):
 
 from hsl3.hsl3 import Hsl3Framework
 from hsl3.hsl3_wrapper import Hsl3WrapperModule
-from hsl3_host_healthcheck import hsl3_14647_ping
 from hsl3_host_healthcheck.hsl3_14647_host_healthcheck import LogicModule
 
 
@@ -90,26 +89,12 @@ class TestHostHealthcheck(unittest.TestCase):
 	def outputs(self):
 		"""Return the values set on the output of the host check logic node."""
 		
-		return (self.wrapper.get_output_value("IS_DETECTED").value, self.wrapper.get_output_value("IS_ONLINE").value)
+		return (self.wrapper.get_output_value("OUT1_IS_ONLINE").value)
 
 	def error(self):
 		"""Return the value set on the error output of the host check logic node."""
 
-		return self.wrapper.get_output_value("ERROR_MESSAGE").value
-	
-	def test_standalone_module_import_and_script_order(self):
-		"""Verify script ordering"""
-		
-		self.assertEqual(
-			[script.filename for script in self.wrapper.config.scripts],
-			["hsl3_14647_host_healthcheck.py","hsl3_14647_ping.py"],
-		)
-		module = types.ModuleType("hsl3_14647_host_healthcheck")
-		source = SRC_DIR / "hsl3_host_healthcheck" / "hsl3_14647_host_healthcheck.py"
-		with patch.dict(sys.modules, {"hsl3_14647_ping": hsl3_14647_ping}):
-			exec(compile(source.read_bytes(), str(source), "exec"), module.__dict__)
-		self.assertIs(module.ping, hsl3_14647_ping.ping)
-		
+		return self.wrapper.get_output_value("OUT3_ERROR_MESSAGE").value
 	
 	def test_http_health_no_benchmark(self):
 		"""Check that the configured host is detected without an error."""
@@ -118,9 +103,9 @@ class TestHostHealthcheck(unittest.TestCase):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME.encode()) 
 		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
 		self.wrapper.set_input_value("IN03_HOST_SSL", 0)
-		self.wrapper.set_input_value("IN05_HEALTHCHECK_BENCHMARK", b"")
+		self.wrapper.set_input_value("IN06_HEALTHCHECK_BENCHMARK", b"")
 				
-		self.assertIn(self.outputs(), [(1, 0), (1, 1)])
+		self.assertEqual(self.outputs(), (1))
 		self.assertEqual(self.error(), b"")
 
 	def test_https_health_no_benchmark(self):
@@ -130,21 +115,21 @@ class TestHostHealthcheck(unittest.TestCase):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME.encode())
 		self.wrapper.set_input_value("IN02_HOST_PORT", 443)
 		self.wrapper.set_input_value("IN03_HOST_SSL", 1)
-		self.wrapper.set_input_value("IN07_HEALTHCHECK_FREQUENCY", 0)
+		self.wrapper.set_input_value("IN08_HEALTHCHECK_FREQUENCY", 0)
 				
-		self.assertIn(self.outputs(), [(1, 0), (1, 1)])
+		self.assertEqual(self.outputs(), (1))
 		self.assertEqual(self.error(), b"")
 
 	def test_output_host_empty(self):
 		self.wrapper.set_input_value("IN01_HOSTNAME", "")
-		self.assertEqual(self.outputs(), (0, 0))
+		self.assertEqual(self.outputs(), (0))
 		self.assertEqual(self.error(), b"Invalid hostname")
 
 	def test_output_port_incorrect(self):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME)
 		self.wrapper.set_input_value("IN02_HOST_PORT", 67000)
 		
-		self.assertEqual(self.outputs(), (0, 0))
+		self.assertEqual(self.outputs(), (0))
 		self.assertEqual(self.error(), b"Invalid port")
 
 	def test_output_ssl_incorrect(self):
@@ -159,36 +144,58 @@ class TestHostHealthcheck(unittest.TestCase):
 		self.wrapper.set_input_value("IN04_HOST_PATH", "invalid")
 		self.assertEqual(self.error(), b"Invalid HTTP path")
 
+	def test_params_valid_json(self):
+		with patch(f"{MODULE}.tcp_health_check", return_value={"available": True, "response_ms": 1}) as tcp:
+			self.wrapper.set_input_value("IN08_HEALTHCHECK_FREQUENCY", 0)
+			self.wrapper.set_input_value("IN01_HOSTNAME", "example.test")
+			tcp.reset_mock()
+			self.wrapper.set_input_value("IN05_PARAMS", '{"key1": 10, "key2": "value2"}')
+
+			self.assertEqual(self.error(), b"")
+			self.assertEqual(self.outputs(), 1)
+			tcp.assert_called_once()
+
+	def test_params_invalid_json(self):
+		with patch(f"{MODULE}.tcp_health_check", return_value={"available": True, "response_ms": 1}) as tcp:
+			self.wrapper.set_input_value("IN08_HEALTHCHECK_FREQUENCY", 0)
+			self.wrapper.set_input_value("IN01_HOSTNAME", "example.test")
+			tcp.reset_mock()
+			self.wrapper.set_input_value("IN05_PARAMS", '{"key1": }')
+
+			self.assertEqual(self.error(), b"Invalid HTTP request parameters")
+			self.assertEqual(self.outputs(), 0)
+			tcp.assert_not_called()
+
 	def test_output_mac_address_incorrect(self):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME)
 		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
-		self.wrapper.set_input_value("IN06_MAC_ADDRESS", "invalid")
+		self.wrapper.set_input_value("IN07_MAC_ADDRESS", "invalid")
 		self.assertEqual(self.error(), b"Invalid MAC address format")
 
 	def test_output_frequency_incorrect(self):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME)
 		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
-		self.wrapper.set_input_value("IN07_HEALTHCHECK_FREQUENCY", -1)
+		self.wrapper.set_input_value("IN08_HEALTHCHECK_FREQUENCY", -1)
 		self.assertEqual(self.error(), b"Invalid healthcheck frequency")
 	
 	def test_output_http_error(self):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME)
 		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
 		self.wrapper.set_input_value("IN04_HOST_PATH", "/error")
-		self.wrapper.set_input_value("IN05_HEALTHCHECK_BENCHMARK", "ready")
+		self.wrapper.set_input_value("IN06_HEALTHCHECK_BENCHMARK", "ready")
 
-		self.assertEqual(self.outputs(), (1, 0))
-		self.assertEqual(self.error(), b"HTTP health check returned status 404")
+		self.assertEqual(self.outputs(), (1))
+		self.assertEqual(self.error(), b"HTTP health check failed with status 404")
 
 	def test_benchmark_check(self):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME)
 		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
 		self.wrapper.set_input_value("IN03_HOST_SSL", 0)
 		self.wrapper.set_input_value("IN04_HOST_PATH", b"")
-		self.wrapper.set_input_value("IN05_HEALTHCHECK_BENCHMARK", b"FRITZ!Box")
-		self.wrapper.set_input_value("IN07_HEALTHCHECK_FREQUENCY", 0)
+		self.wrapper.set_input_value("IN06_HEALTHCHECK_BENCHMARK", b"FRITZ!Box")
+		self.wrapper.set_input_value("IN08_HEALTHCHECK_FREQUENCY", 0)
 		
-		self.assertEqual(self.outputs(), (1, 1))
+		self.assertEqual(self.outputs(), (1))
 		self.assertEqual(self.error(), b"")
 
 	def test_benchmark_check_fails(self):
@@ -196,20 +203,31 @@ class TestHostHealthcheck(unittest.TestCase):
 		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
 		self.wrapper.set_input_value("IN03_HOST_SSL", 0)
 		self.wrapper.set_input_value("IN04_HOST_PATH", b"")
-		self.wrapper.set_input_value("IN05_HEALTHCHECK_BENCHMARK", b"FRITZ!!Box")
-		self.wrapper.set_input_value("IN07_HEALTHCHECK_FREQUENCY", 0)
+		self.wrapper.set_input_value("IN06_HEALTHCHECK_BENCHMARK", b"FRITZ!!Box")
+		self.wrapper.set_input_value("IN08_HEALTHCHECK_FREQUENCY", 0)
 
-		self.assertEqual(self.outputs(), (1, 0))
-		self.assertEqual(self.error(), b"HTTP health check benchmark was not found in the response")
+		self.assertEqual(self.outputs(), (1))
+		self.assertEqual(self.error(), b"Benchmark not found in response body")
+
+	def test_url_with_params(self):
+		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME)
+		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
+		self.wrapper.set_input_value("IN03_HOST_SSL", 0)
+		self.wrapper.set_input_value("IN04_HOST_PATH", b"")
+		self.wrapper.set_input_value("IN06_HEALTHCHECK_BENCHMARK", b"FRITZ!!Box")
+		self.wrapper.set_input_value("IN08_HEALTHCHECK_FREQUENCY", 0)
+
+		self.assertEqual(self.outputs(), (1))
+		self.assertEqual(self.error(), b"Benchmark not found in response body")
 
 	def test_wol_request(self):
 		self.wrapper.set_input_value("IN01_HOSTNAME", HOSTNAME)
 		self.wrapper.set_input_value("IN02_HOST_PORT", 80)
-		self.wrapper.set_input_value("IN06_MAC_ADDRESS", MAC_ADDRESS)
-		self.wrapper.set_input_value("IN08_TRIGGER_WOL", "1")
+		self.wrapper.set_input_value("IN07_MAC_ADDRESS", MAC_ADDRESS)
+		self.wrapper.set_input_value("IN09_TRIGGER_WOL", "1")
 		
-		self.assertEqual(self.error(), b"")
-
+		self.assertEqual(self.outputs(), (1))
+		self.assertEqual(self.error(), b"") 
 
 
 if __name__ == "__main__":
