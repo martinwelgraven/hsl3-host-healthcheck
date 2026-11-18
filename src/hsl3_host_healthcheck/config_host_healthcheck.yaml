@@ -1,7 +1,7 @@
 module:
   id: 14647
   name: Host Healthcheck
-  version: 0.1.0
+  version: 0.1.1
   version_date: 2026-11-18
   description: |-
     A hsl3 module for network detection. With several health check mechanisms.
@@ -18,6 +18,7 @@ module:
     Errors and critical messages are always logged.
 
     0.1.0 First working version.
+    0.1.1 a test version
   category: "Network Tools"
   context: "host_healthcheck"
   hsl_filename: "14647_host_healthcheck.hsl"
