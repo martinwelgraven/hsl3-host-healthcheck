@@ -1,181 +1,204 @@
 # 14647 Host Healthcheck
 
-A logic node for the GIRA HomeServer that checks a configured hosts for its health status. Depending on the configuration it can check via ping, tcp or http(s) connections. If the host has WakeOnLan enabled, you can trigger a wake command via an input. 
+A GIRA HomeServer logic node for checking whether a configured host is reachable
+or its HTTP endpoint is healthy. It supports UDP and TCP probes, HTTP(S) checks,
+periodic checks, and Wake-on-LAN.
 
-> **EARLY STAGES OF DEVELOPMENT**<br/>
-> This software is in the early stages of development. Please use accordingly and provide feedback if you experience issues.
+> **Early stages of development**
+>
+> This software is in the early stages of development. Use it accordingly and
+> provide feedback if you experience issues.
 
-> **Independent Development & Non-Affiliation Disclaimer**<br/>
-> This software is an independently developed integration. It is not affiliated with, endorsed by, or supported by Gira Giersiepen GmbH & Co. KG or Connectix or any of their affiliated companies. All referenced product and company names are trademarks of their respective owners and are used for identification purposes only.
+> **Independent development and non-affiliation disclaimer**
+>
+> This software is an independently developed integration. It is not affiliated
+> with, endorsed by, or supported by Gira Giersiepen GmbH & Co. KG, Connectix,
+> or their affiliated companies. Referenced product and company names are
+> trademarks of their respective owners and are used for identification only.
 
 ## Features
 
-
+- Check host reachability with a UDP probe followed by a TCP connection attempt.
+- Check an HTTP(S) endpoint, optionally looking for a benchmark string in the
+  response body.
+- Run checks periodically using a configurable interval.
+- Send a Wake-on-LAN packet when triggered.
 
 ## Table of Contents
 
-## Installation
+- [Requirements and setup](#requirements-and-setup)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Health-check behavior and limitations](#health-check-behavior-and-limitations)
+- [Testing](#testing)
+- [Project structure](#project-structure)
+- [License](#license)
+- [Contributing](#contributing)
+- [Additional resources](#additional-resources)
+- [Support](#support)
 
-### Requirements
+## Requirements and setup
 
-- Python 3.9.x (as installed on the HomeServer/FacilityServer itself)
-- Package `requests`: `pip install requests`
+If you plan to work with this project, ensure you have the following prerequisites installed:
+- Python 3.9 (the project metadata requires `>=3.9,<3.10`).
+- The `requests` package for the logic module.
+- The `pyyaml` package for parsing YAML configuration files.
+- The `pytest` package for running tests.
+- The `hsl3` Git submodule for local framework development.
 
-### Setup
-
-From the repository root, build the HSL file using the local framework:
+Initialize the framework submodule with:
 
 ```bash
-uv run build-hsl
+git submodule update --init --recursive
 ```
 
-This overwrites `src/hsl3_host_healthcheck/14647_host_healthcheck.hsl`.
-Ensure the `hsl3` Git submodule is initialized before building.
+The current module configuration is
+[`src/hsl3_host_healthcheck/config_host_healthcheck.yaml`](src/hsl3_host_healthcheck/config_host_healthcheck.yaml).
+The repository also includes
+[`src/hsl3_host_healthcheck/config_host_healthcheck.json.example`](src/hsl3_host_healthcheck/config_host_healthcheck.json.example)
+as a JSON configuration example.
 
-## Quick Start
+The generated HSL module is
+[`src/hsl3_host_healthcheck/14647_host_healthcheck.hsl`](src/hsl3_host_healthcheck/14647_host_healthcheck.hsl).
+The project's `pyproject.toml` does not define the previously documented
+`uv run build-hsl` command; consult the HSL3 framework's build instructions
+before regenerating module artifacts.
 
-### Basic Example
+## Quick start
 
-This is a basic example for building testcase 
+The following shows how the module is wired to the local HSL3 test wrapper. Set
+`IN01_HOSTNAME` to a non-empty path to use an HTTP(S) check;
 
 ```python
 from hsl3.hsl3 import Hsl3Framework
 from hsl3.hsl3_wrapper import Hsl3WrapperModule
 from hsl3_host_healthcheck.hsl3_14647_host_healthcheck import LogicModule
 
-# Create HSL3 instance
 hsl3fw = Hsl3Framework("14647_host_healthcheck")
 logic_module = LogicModule(hsl3fw)
-
-# Create wrapper with configuration
 wrapper_node = Hsl3WrapperModule(
-    "src/hsl3_host_healthcheck/config_host-healthcheck.json",
+    "src/hsl3_host_healthcheck/config_host_healthcheck.yaml",
     logic_module,
 )
+hsl3fw.config = wrapper_node.config
 
-# Set input values
-wrapper_node.set_input_value("IN01_HOST_NAME", "127.0.0.1")
-wrapper_node.set_input_value("IN02_HOST_PORT", 80)
-wrapper_node.set_input_value("IN03_HOST_SSL", 1)
-wrapper_node.set_input_value("IN04_HOST_PATH", "/")
-```
-
-## Project Structure
-
-```
-hsl3/                               # Core HSL3 framework
-src/hsl3_host_healthcheck/              # Logic node package
-    ├── config_host-healthcheck.json    # Module configuration
-    ├── hsl3_14647_host_healthcheck.py  # Generated logic module
-    ├── 14647_host_healthcheck.hsl      # HSL3 source file
-    └── log14647.html                   # HTML information file
-tests/                              # Test suite
-└── test_14647_host_healthcheck.py  # Test and demo
-README.md
-LICENSE
+wrapper_node.set_input_value("IN01_HOSTNAME", "127.0.0.1")
+wrapper_node.set_input_value("IN02_UDP_PORT", 7)
+wrapper_node.set_input_value("IN03_TCP_PORT", 80)
+wrapper_node.set_input_value("IN05_HOST_PATH", "/health")
+wrapper_node.set_input_value("IN07_BENCHMARK", "ready")
 ```
 
 ## Configuration
 
-The module is configured through `src/hsl3_host_healthcheck/config_host-healthcheck.json`.
-
-### Inputs
+The YAML file is the current module configuration. Inputs and defaults:
 
 | Identifier | Type | Default | Description |
-|------------|------|---------|-------------|
-| `IN01_HOST_NAME` | String | Empty | Hostname or IP address to check. |
-| `IN02_HOST_PORT` | Number | `80` | Port number to check. |
-| `IN03_HOST_SSL` | Number | `1` | Whether to use SSL for the health check (`1` = yes, `0` = no). |
-| `IN04_HOST_PATH` | String | Empty | HTTP(S) path to request when checking whether the host is reachable. |
-| `IN05_HEALTHCHECK_BENCHMARK` | String | Empty | Benchmark value for the HTTP(S) health check. |
-| `IN06_MAC_ADDRESS` | String | Empty | MAC address of the host, used for Wake-on-LAN. |
-| `IN07_HEALTHCHECK_FREQUENCY` | Number | `1` | Health-check frequency in seconds. |
-| `IN08_TRIGGER_WOL` | Number | `1` | Whether to trigger Wake-on-LAN (`1` = yes, `0` = no). |
+|---|---|---:|---|
+| `IN01_HOSTNAME` | String | Empty | Hostname or IP address to check. |
+| `IN02_UDP_PORT` | Number | `7` | UDP port to probe; `0` disables the UDP probe. |
+| `IN03_TCP_PORT` | Number | `80` | TCP port to connect to; `0` disables the TCP probe. |
+| `IN04_SSL` | Number | `0` | Use HTTPS instead of HTTP (`1` = yes, `0` = no). |
+| `IN05_HOST_PATH` | String | Empty | HTTP(S) path. When empty, use UDP/TCP probes instead. |
+| `IN06_PARAMS` | String | `{}` | HTTP request parameters, supplied as a JSON string. |
+| `IN07_BENCHMARK` | String | Empty | Text that must appear in the HTTP response body. |
+| `IN08_MAC_ADDRESS` | String | Empty | Target MAC address for Wake-on-LAN. |
+| `IN09_HEALTHCHECK_FREQUENCY` | Number | `60` | Periodic check interval in seconds; `0` disables periodic checks. |
+| `IN10_TRIGGER_WOL` | Number | `0` | A change to this input triggers Wake-on-LAN. |
+| `IN11_ENABLE_LOGGING` | Number | `0` | Enable debug logging (`1` = yes, `0` = no). |
 
-### Health-check behavior
+Outputs declared by the module configuration:
 
-Changing the host, port, SSL setting, path, or benchmark runs a check. The
-module first requests the configured HTTP(S) path (or `/` when empty). A 2xx
-response is online if the response body contains the benchmark text; an empty
-benchmark accepts any 2xx response. HTTPS certificates are verified, redirects
-are not followed, and HTTP proxies are not used.
+| Identifier | Type | Description |
+|---|---|---|
+| `OUT1_IS_ONLINE` | Number | `1` when the selected health check succeeds; otherwise `0`. |
+| `OUT2_RESPONSE_TIME` | Number | Probe or HTTP response time in milliseconds. |
+| `OUT3_HTTP_RESPONSE` | String | Intended to contain the HTTP response. The current logic code does not publish it: it uses a different identifier, which is also absent from its output map. |
+| `OUT4_ERROR_MESSAGE` | String | Error for the most recent validation or HTTP check; empty when cleared. |
 
-Any HTTP response detects the host, even if its status or body fails the health
-check. If there is no HTTP response, the module tries the configured TCP port,
-system ping, and raw ICMP echo, in that order, stopping at the first successful
-probe. Raw ICMP may require elevated privileges. If all probes fail, the host
-is reported as not detected and offline; this does not prove it is powered off,
-because firewalls or network errors can also block probes.
+## Health-check behavior and limitations
 
-The frequency and Wake-on-LAN inputs are not yet implemented; checks are
-currently triggered only by changes to the health-check inputs above.
-Checks run synchronously in the logic node and can take several seconds when
-probes time out.
-
-### Outputs
-
-| Identifier | Type | Default | Description |
-|------------|------|---------|-------------|
-| `IS_DETECTED` | Number | `0` | Whether the host is detected on the network (`1` = yes, `0` = no). |
-| `IS_ONLINE` | Number | `0` | Whether the HTTP(S) health check succeeds (`1` = yes, `0` = no). |
-| `ERROR_MESSAGE` | String | Empty | Reason the HTTP(S) health check failed, or empty after a successful check. |
-
-`ERROR_MESSAGE` also reports an empty hostname or invalid configuration. A
-successful fallback network probe does not clear an HTTP error: it indicates
-reachability, not HTTP health. Non-ASCII characters in error messages are
-escaped for compatibility with the HomeServer string output. An empty hostname
-skips the check and leaves the previous detection and online outputs unchanged.
+- With an empty path, the module tries the configured UDP port first and then
+  the configured TCP port if UDP does not succeed. A successful connection
+  indicates reachability, not that an application is healthy.
+- With a non-empty path, the module performs an HTTP GET. Only status `200` is
+  considered successful. If a benchmark is configured, it must occur in the
+  response body; otherwise any `200` response passes.
+- The module uses the configured SSL input to choose HTTP or HTTPS. TLS
+  certificate verification is disabled in the current implementation, and
+  redirects are followed by the HTTP client.
+- Checks run in the logic node. UDP and TCP probes have socket timeouts, but
+  the HTTP request currently has no timeout configured and may block longer
+  than expected.
+- A failed HTTP check does not fall back to UDP or TCP. The frequency input
+  schedules repeated checks when greater than zero.
+- Wake-on-LAN requires a valid MAC address and a network that permits the
+  broadcast packet to reach the target.
 
 ## Testing
 
-Create a local environment file from the template and set the host and MAC
-address used by the tests:
+Create a local environment file from the template:
 
 ```bash
 cp .env.example .env
 ```
 
-Set `HOST_NAME` to the hostname or IP address of the test host and `MAC_ADDRESS`
-to its Wake-on-LAN MAC address in `.env`. The local `.env` file is ignored by
-Git; do not commit your device-specific values.
+Set `HOSTNAME` to the hostname or IP address of the test host, `MAC_ADDRESS` to
+its Wake-on-LAN MAC address, and provide `UDP_PORT` and `TCP_PORT` values. The
+test module requires all four variables to be present in `.env`; individual
+test cases configure their own probe ports. The local `.env` file is ignored
+by Git; do not commit device-specific values.
 
-Run the full test suite with:
+Install the development dependencies and run the test suite with:
 
 ```bash
+uv sync --extra dev
 uv run --extra dev pytest tests/
 ```
 
-Pytest discovers all test files in `tests/` that follow its naming conventions
-(`test_*.py` or `*_test.py`). Run the command above after adding a test file so
-the entire suite is executed. The current test can also be run on its own with:
+The tests include network-dependent checks against the configured host as well
+as a local HTTP test server. Ensure the configured host and network are
+available before running them.
 
-```bash
-./tests/test_14647_host_healthcheck.py
+## Project structure
+
+```text
+hsl3/                                        # HSL3 framework Git submodule
+src/hsl3_host_healthcheck/
+├── 14647_host_healthcheck.hsl               # HSL module artifact
+├── config_host_healthcheck.yaml             # Current module configuration
+├── config_host_healthcheck.json.example     # JSON configuration example
+├── hsl3_14647_host_healthcheck.py           # Logic module
+├── hsl3_14647_ping.py                       # UDP, TCP, and Wake-on-LAN helpers
+└── log14647.html                            # Module information page
+tests/
+└── test_14647_host_healthcheck.py
 ```
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0). See [LICENSE](LICENSE) for details.
 
 ## Contributing
 
-Contributions are welcome! Please ensure:
+Contributions are welcome. Please ensure:
 
-- Code follows the existing structure and naming conventions
-- JSON configurations are properly formatted and validated
-- Tests pass before submitting pull requests
-- New features include corresponding documentation
+- Code follows the existing structure and naming conventions.
+- JSON and YAML configurations are properly formatted and validated.
+- Tests pass before submitting pull requests.
+- New features include corresponding documentation.
 
-## Additional Resources
+## Additional resources
 
-- [Gira HomeServer Documentation](https://www.gira.de/) (official Gira resources)
+- [Gira HomeServer resources](https://www.gira.de/)
 - [GiraHS HSL3 Development Framework](https://github.com/martinwelgraven/girahs-hsl3)
 
 ## Support
 
 For issues or questions:
 
-1. Check existing issues on the repository
-2. Review configuration examples in `src/`
-3. Run tests to isolate problems
-4. Enable debug output using HSL3 debug sections
+1. Check existing issues on the repository.
+2. Review configuration examples in `src/`.
+3. Run tests to isolate problems.
+4. Enable debug output using the HSL3 debug sections.
