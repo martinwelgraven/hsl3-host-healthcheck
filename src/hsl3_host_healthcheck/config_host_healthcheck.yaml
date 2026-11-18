@@ -1,0 +1,113 @@
+module:
+  id: 14647
+  name: Host Healthcheck
+  version: 0.1.1
+  version_date: 2026-11-18
+  description: |-
+    A hsl3 module for network detection. With several health check mechanisms.
+    
+    HTTP Health reflects the result of the following checks in order of precedence:
+    - if path (minimal '/') and benchmark are provided, the benchmark result
+    - if only path is provided, the HTTP statuscode result
+    - A UDP port scan (UDP port != 0)
+    - A TCP port scan (TCP port != 0)
+      
+    If a MAC Address is provided, a Wake-on-LAN can be triggerred
+  warning: ""
+  note: |-
+    Errors and critical messages are always logged.
+
+    0.1.0 First working version.
+    0.1.1 a test version
+  category: "Network Tools"
+  context: "host_healthcheck"
+  hsl_filename: "14647_host_healthcheck.hsl"
+  inputs:
+    - type: "string"
+      identifier: "IN01_HOSTNAME"
+      init_value: ""
+      label: "Host Name or IP"
+      description: "Host name or IP address to check."
+    - type: "number"
+      identifier: "IN02_UDP_PORT"
+      init_value: 7
+      label: "UDP Port"
+      description: "UDP port to check on (0 for no check)."
+    - type: "number"
+      identifier: "IN03_TCP_PORT"
+      init_value: 80
+      label: "TCP Port"
+      description: "TCP port to check on (0 for no check)."
+    - type: "number"
+      identifier: "IN04_SSL"
+      init_value: 0
+      label: "Host use SSL (1=True, 0=False)"
+      description: "Indicates whether to use SSL for the health check (1=True, 0=False)."
+    - type: "string"
+      identifier: "IN05_HOST_PATH"
+      init_value: ""
+      label: "Host Path [o]"
+      description: "Path to execute a HTTP request and check if the host is reachable."
+    - type: "string"
+      identifier: "IN06_PARAMS"
+      init_value: "{}"
+      label: "HTTP Request Parameters [o]"
+      description: "Parameters to include in the HTTP request {} or {'key1': 10, 'key2': 'value2'} format."
+    - type: "string"
+      identifier: "IN07_BENCHMARK"
+      init_value: ""
+      label: "Benchmark [o]"
+      description: "Benchmark value to find in the response of a http(S) request."
+    - type: "string"
+      identifier: "IN08_MAC_ADDRESS"
+      init_value: ""
+      label: "MAC Address [o]"
+      description: "MAC address of the host."
+    - type: "number"
+      identifier: "IN09_HEALTHCHECK_FREQUENCY"
+      init_value: 60
+      label: "Healthcheck Frequency"
+      description: "Frequency of the health check in seconds (0 for no periodic check)."
+    - type: "number"
+      identifier: "IN10_TRIGGER_WOL"
+      init_value: 0
+      label: "Trigger Wake-on-LAN"
+      description: "Trigger for Wake-on-LAN. Any input will trigger the action."
+    - type: "number"
+      identifier: "IN11_ENABLE_LOGGING"
+      init_value: 0
+      label: "Enable Logging (1=True, 0=False)"
+      description: "Enable syslog messages and debugging (1=True, 0=False)."
+  outputs:
+    - type: "number"
+      identifier: "OUT1_IS_ONLINE"
+      init_value: 0
+      sbc: "s"
+      label: "HTTP Health"
+      description: "Indicates whether the HTTP health check succeeds (1=True, 0=False)."
+    - type: "number"
+      identifier: "OUT2_RESPONSE_TIME"
+      init_value: 0.0
+      sbc: "s"
+      label: "Response Time"
+      description: "Response time of the Ping health check in milliseconds."
+    - type: "string"
+      identifier: "OUT3_HTTP_RESPONSE"
+      init_value: ""
+      sbc: "s"
+      label: "HTTP Response"
+      description: "HTTP response if path or benchmark filled. Format '<status_code>|<response>'"
+    - type: "string"
+      identifier: "OUT4_ERROR_MESSAGE"
+      init_value: ""
+      sbc: "s"
+      label: "Health Check Error"
+      description: "Error message for the most recent HTTP health check, or empty when successful."
+  stores: []
+  timers:
+    - identifier: "HOST_CHECK_TIMER"
+      description: "The seconds interval for performing periodic host health checks."
+  scripts:
+    - filename: "hsl3_14647_host_healthcheck.py"
+    - filename: "hsl3_14647_ping.py"
+  translations: []
