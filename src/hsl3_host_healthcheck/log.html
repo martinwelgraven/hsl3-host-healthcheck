@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+	<head> 
+		<link rel="stylesheet" href="style.css">
+		<title>Logic - Host Healthcheck</title>
+		<style>
+			body { background: none; }
+		</style>
+		<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	</head>
+	<body>
+		<div>
+			<div class="top-title">Host Healthcheck</div>
+			<div class="nav"><a href="javascript:history.back()">Previous</a> / 
+				<a href="javascript:history.forward()">Next</a> | 
+				<a href="hlpsearch.html">Search</a> | 
+				<a href="index.html">Help</a> / 
+				<a href="logic.html">Logic</a> / 
+				Host Healthcheck
+			</div>
+			<div class="index">
+				<div class="index-title"><a id="doc_index_1_"></a>Contents</div>
+				<div class="t-line">
+					<div class="t-chapter">
+						<a href="#auto_index_anchor_1_">1.</a>
+					</div>
+					<div class="t-text">
+						<a href="#auto_index_anchor_1_">Description</a>
+					</div>
+				</div>
+				<div class="t-line">
+					<div class="t-chapter">
+						<a href="#auto_index_anchor_2_">2.</a>
+					</div>
+					<div class="t-text">
+						<a href="#auto_index_anchor_2_">Inputs</a>
+					</div>
+				</div>
+				<div class="t-line">
+					<div class="t-chapter">
+						<a href="#auto_index_anchor_3_">3.</a>
+					</div>
+					<div class="t-text">
+						<a href="#auto_index_anchor_3_">Outputs</a>
+					</div>
+				</div>
+				<div class="t-line">
+					<div class="t-chapter">
+						<a href="#auto_index_anchor_4_">4.</a>
+					</div>
+					<div class="t-text">
+						<a href="#auto_index_anchor_4_">Other</a>
+					</div>
+				</div>
+				<div class="t-line">
+					<div class="t-chapter">
+						<a href="#auto_index_anchor_5_">5.</a>
+					</div>
+					<div class="t-text">
+						<a href="#auto_index_anchor_5_">Similar functions</a>
+					</div>
+				</div>
+			</div>
+			<div class="content">
+				<div class="topic">
+					<h2 class="t-line">
+						<a id="auto_index_anchor_1_"></a>
+						<span class="t-chapter">1.</span>
+						<span class="t-text">Description</span>
+					</h2>
+					<div class="descr">A hsl3 module for network detection. With several health check mechanisms.<br><br>HTTP Health reflects the result of the following checks in order of precedence:<br>- if path (minimal '/') and benchmark are provided, the benchmark result<br>- if only path is provided, the HTTP statuscode result<br>- A UDP port scan (UDP port != 0)<br>- A TCP port scan (TCP port != 0)<br>  <br>If a MAC Address is provided, a Wake-on-LAN can be triggerred</div>
+					<div class="alert-box ibox-hint">
+						<div class="box-title">Note</div>
+						<div class="box-text">
+							<div class="descr">Errors and critical messages are always logged.<br><br>0.1.0 First working version.<br>0.1.1 This is a short releasenote<br>0.1.2 Just a test<br>0.1.3 Test version 3<br>0.1.4 Test number 4<br>0.1.5 This is a fifth test<br>0.1.6 Y<br>0.1.7 Final YAML test</div>
+						</div>
+					</div>
+				</div>
+					<h2 class="t-line">
+						<a id="auto_index_anchor_2_"></a>
+						<span class="t-chapter">2.</span>
+						<span class="t-text">Inputs</span>
+					</h2>
+					<div>
+						<table class="table-in">
+							<tr>
+								<th class="io-nr center">No.</th>
+								<th class="io-name">Name</th>
+								<th class="io-init center">Initialisation</th>
+								<th class="io-descr">Description</th>
+							</tr>
+							<tr>
+								<td class="io-nr input center">1</td>
+								<td class="io-name">Host Name or IP</td>
+								<td class="io-init string center"></td>
+								<td class="io-descr">
+								<div class="descr">Host name or IP address to check.</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">2</td>
+								<td class="io-name">UDP Port</td>
+								<td class="io-init string center">7</td>
+								<td class="io-descr">
+								<div class="descr">UDP port to check on (0 for no check).</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">3</td>
+								<td class="io-name">TCP Port</td>
+								<td class="io-init string center">80</td>
+								<td class="io-descr">
+								<div class="descr">TCP port to check on (0 for no check).</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">4</td>
+								<td class="io-name">Host use SSL (1=True, 0=False)</td>
+								<td class="io-init string center">0</td>
+								<td class="io-descr">
+								<div class="descr">Indicates whether to use SSL for the health check (1=True, 0=False).</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">5</td>
+								<td class="io-name">Host Path [o]</td>
+								<td class="io-init string center"></td>
+								<td class="io-descr">
+								<div class="descr">Path to execute a HTTP request and check if the host is reachable.</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">6</td>
+								<td class="io-name">HTTP Request Parameters [o]</td>
+								<td class="io-init string center">{}</td>
+								<td class="io-descr">
+								<div class="descr">Parameters to include in the HTTP request {} or {'key1': 10, 'key2': 'value2'} format.</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">7</td>
+								<td class="io-name">Benchmark [o]</td>
+								<td class="io-init string center"></td>
+								<td class="io-descr">
+								<div class="descr">Benchmark value to find in the response of a http(S) request.</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">8</td>
+								<td class="io-name">MAC Address [o]</td>
+								<td class="io-init string center"></td>
+								<td class="io-descr">
+								<div class="descr">MAC address of the host.</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">9</td>
+								<td class="io-name">Healthcheck Frequency</td>
+								<td class="io-init string center">60</td>
+								<td class="io-descr">
+								<div class="descr">Frequency of the health check in seconds (0 for no periodic check).</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">10</td>
+								<td class="io-name">Trigger Wake-on-LAN</td>
+								<td class="io-init string center">0</td>
+								<td class="io-descr">
+								<div class="descr">Trigger for Wake-on-LAN. Any input will trigger the action.</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr input center">11</td>
+								<td class="io-name">Enable Logging (1=True, 0=False)</td>
+								<td class="io-init string center">0</td>
+								<td class="io-descr">
+								<div class="descr">Enable syslog messages and debugging (1=True, 0=False).</div>
+								</td>
+							</tr>
+						</table>
+					</div>
+					<h2 class="t-line">
+						<a id="auto_index_anchor_3_"></a>
+						<span class="t-chapter">3.</span>
+						<span class="t-text">Outputs</span>
+					</h2>
+					<div>
+						<table class="table-out">
+							<tr>
+								<th class="io-nr center">No.</th>
+								<th class="io-name">Name</th>
+								<th class="io-init center">Initialisation</th>
+								<th class="o-sbc center"><a href="logic2.html#_Toc17193931">SBC</a></th>
+								<th class="io-descr">Description</th>
+							</tr>
+							<tr>
+								<td class="io-nr output center">1</td>
+								<td class="io-name">HTTP Health</td>
+									<td class="io-init string center">0</td>
+								<td class="o-sbc center">s</td>
+								<td class="io-descr">
+									<div class="descr">Indicates whether the HTTP health check succeeds (1=True, 0=False).</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr output center">2</td>
+								<td class="io-name">Response Time</td>
+									<td class="io-init string center">0.0</td>
+								<td class="o-sbc center">s</td>
+								<td class="io-descr">
+									<div class="descr">Response time of the Ping health check in milliseconds.</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr output center">3</td>
+								<td class="io-name">HTTP Response</td>
+									<td class="io-init string center"></td>
+								<td class="o-sbc center">s</td>
+								<td class="io-descr">
+									<div class="descr">HTTP response if path or benchmark filled. Format '<status_code>|<response>'</div>
+								</td>
+							</tr>
+							<tr>
+								<td class="io-nr output center">4</td>
+								<td class="io-name">Health Check Error</td>
+									<td class="io-init string center"></td>
+								<td class="o-sbc center">s</td>
+								<td class="io-descr">
+									<div class="descr">Error message for the most recent HTTP health check, or empty when successful.</div>
+								</td>
+							</tr>
+						</table>
+						<div class="small">
+						s = <a href="logic2.html#_Toc17193931">send</a>, 
+						sbc = <a href="logic2.html#_Toc17193931">send by change</a>
+						</div>
+					</div>
+				 <h2 class="t-line">
+					<a id="auto_index_anchor_4_"></a>
+					<span class="t-chapter">4.</span>
+					<span class="t-text">Other</span>
+				</h2>
+				<table class="table-logic-info">
+					<tr>
+						<th>Internal designation:</th>
+						<td>14647</td>
+					</tr>
+					<tr>
+						<th>Current version:</th>
+						<td>0.1.7</td>
+					</tr>
+					<tr>
+						<th>Category:</th>
+						<td>Network Tools</td>
+					</tr>
+					<tr>
+						<th>Context:</th>
+						<td>host_healthcheck</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</body>
+</html>
